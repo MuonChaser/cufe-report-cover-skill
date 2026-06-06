@@ -4,7 +4,13 @@
 from __future__ import annotations
 
 import argparse
+import sys
 from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+VENDOR = ROOT / "vendor"
+if VENDOR.exists():
+    sys.path.insert(0, str(VENDOR))
 
 try:
     from pypdf import PdfReader, PdfWriter

@@ -6,8 +6,14 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import sys
 from io import BytesIO
 from pathlib import Path
+
+ROOT = Path(__file__).resolve().parents[1]
+VENDOR = ROOT / "vendor"
+if VENDOR.exists():
+    sys.path.insert(0, str(VENDOR))
 
 try:
     from reportlab.lib.pagesizes import A4
@@ -20,8 +26,6 @@ except ImportError as exc:
         "Missing dependency: reportlab. Install with `python3 -m pip install reportlab`."
     ) from exc
 
-
-ROOT = Path(__file__).resolve().parents[1]
 ASSETS = ROOT / "assets"
 COURSE_COVER_PAGE1 = ASSETS / "course_paper_cover_page1.pdf"
 LAB_COVER_PAGE1 = ASSETS / "lab_report_cover_page1.pdf"
