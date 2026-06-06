@@ -26,6 +26,35 @@ cp -R cufe-report-cover ~/.codex/skills/
 
 After that, another Codex agent can invoke the skill as `$cufe-report-cover`.
 
+## WSL Install With SSH
+
+On WSL, first make sure your SSH key is added to GitHub, then clone the public repository with SSH:
+
+```bash
+mkdir -p ~/src ~/.codex/skills
+cd ~/src
+git clone git@github.com:MuonChaser/cufe-report-cover-skill.git
+ln -sfn ~/src/cufe-report-cover-skill/cufe-report-cover ~/.codex/skills/cufe-report-cover
+```
+
+Install the lightweight Python dependencies:
+
+```bash
+cd ~/src/cufe-report-cover-skill/cufe-report-cover
+python3 -m venv .venv
+. .venv/bin/activate
+python3 -m pip install -r requirements.txt
+```
+
+Quick smoke test:
+
+```bash
+python3 scripts/generate_cover.py \
+  --type lab-report \
+  --data ../examples/lab-report.yaml \
+  --output ../output/lab-cover.pdf
+```
+
 ## Python Setup
 
 The scripts are intentionally lightweight. Create a virtual environment inside the skill folder:
