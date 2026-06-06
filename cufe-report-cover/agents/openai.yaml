@@ -1,0 +1,4 @@
+interface:
+  display_name: "CUFE Report Cover"
+  short_description: "Generate CUFE course and lab report cover PDFs"
+  default_prompt: "Use $cufe-report-cover to generate a CUFE lab report cover PDF from my report fields."
