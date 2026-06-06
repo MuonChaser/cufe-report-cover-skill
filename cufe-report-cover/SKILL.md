@@ -1,13 +1,13 @@
 ---
 name: cufe-report-cover
-description: Generate Central University of Finance and Economics (CUFE, 中央财经大学) report cover PDFs for course papers and lab reports. Use when a user needs a CUFE 课程论文封面 or 实验报告封面, needs a one-page cover PDF, wants to prepend a cover to an existing report PDF, or asks to avoid LaTeX/DOCX while preserving the original cover layout.
+description: Generate Central University of Finance and Economics (CUFE, 中央财经大学) report cover PDFs/PNGs and prepend cover pages to PDFs or DOCX files for course papers and lab reports. Use when a user needs a CUFE 课程论文封面 or 实验报告封面, needs a one-page cover PDF/PNG, wants to prepend a cover to an existing report PDF/DOCX, or asks to avoid LaTeX/DOCX template editing while preserving the original cover layout.
 ---
 
 # CUFE Report Cover
 
 ## Overview
 
-Generate a one-page CUFE cover PDF from structured fields. Do not edit the original templates through DOCX, Word, WPS, Google Docs, or office conversion workflows; these often reflow Chinese fonts, lines, and spacing. Generate a fresh cover PDF with the bundled scripts, then replace/prepend the report's existing cover page if needed.
+Generate a one-page CUFE cover from structured fields. Do not edit the original cover templates through DOCX, Word, WPS, Google Docs, or office conversion workflows; these often reflow Chinese fonts, lines, and spacing. Generate a fresh cover PDF/PNG with the bundled scripts, then replace/prepend the report's existing cover page if needed.
 
 ## Template Choice
 
@@ -95,9 +95,33 @@ python3 /path/to/cufe-report-cover/scripts/merge_cover.py \
 
 Keep all operations at PDF level. Do not convert the template or report through DOCX/Word/WPS/Google Docs to edit it.
 
+## DOCX Cover Insertion
+
+For a DOCX deliverable, do not rebuild the cover as Word text, shapes, or tables. Render the CUFE cover to a full-page PNG and insert that image as page 1:
+
+```bash
+python3 /path/to/cufe-report-cover/scripts/prepend_docx_cover.py \
+  --type course-paper \
+  --data cover.yaml \
+  --input-docx report_body.docx \
+  --output-docx report_with_cover.docx \
+  --preview-png cover_preview.png
+```
+
+`prepend_docx_cover.py`:
+
+- renders the original PDF template background with `pdftoppm`
+- overlays field values onto the PNG with Pillow
+- defaults `--font-index 2`, which is the Simplified Chinese face in `NotoSansCJK-Regular.ttc`
+- inserts the PNG as a full A4 first page
+- sets the cover section margins to `0`
+- restores body margins to top/bottom `2.5cm`, left/right `2.3cm` unless overridden
+
+Use `--field-offset-y -12` or `--field-offset-x <px>` when all fields need a small global adjustment on the rendered PNG.
+
 ## Font Preservation
 
-Template content is preserved as the original PDF background, so the school logo, headings, labels, lines, and existing template typography are not redrawn. Field values are overlaid by ReportLab with `STSong-Light` by default for reliable PDF merging. To force a specific field-value font, set `CUFE_COVER_FONT=/path/to/font.ttf` before running `generate_cover.py`; verify the rendered PDF afterward because some local TTF/TTC fonts do not survive PDF overlay merging consistently.
+Template content is preserved as the original PDF background, so the school logo, headings, labels, lines, and existing template typography are not redrawn. Field values in generated PDFs are overlaid by ReportLab with `STSong-Light` by default for reliable PDF merging. Field values in rendered PNG/DOCX covers are overlaid by Pillow with a real CJK font; for `.ttc` collections, pass `--font-index`, defaulting to `2` for `Noto Sans CJK SC`.
 
 ## Dependencies
 

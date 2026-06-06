@@ -38,6 +38,7 @@ python3 -m pip install -r requirements.txt
 ```
 
 Python 3.9+ is recommended. The scripts use `reportlab`, `pypdf`, and `pyyaml`.
+DOCX cover insertion also uses `pillow`, `python-docx`, and `pdftoppm` from Poppler.
 
 ## Generate A Lab Report Cover
 
@@ -108,6 +109,31 @@ python3 scripts/merge_cover.py \
 
 If the body PDF has no cover, omit `--drop-body-first-page`.
 
+## Prepend A Cover To DOCX
+
+For a Word document, do not rebuild the cover as Word text boxes, tables, or shapes. Render the original CUFE PDF template to a full-page PNG, paint the fields with a Simplified Chinese font, then insert that PNG as the first page:
+
+```bash
+cd cufe-report-cover
+. .venv/bin/activate
+python3 scripts/prepend_docx_cover.py \
+  --type course-paper \
+  --data ../examples/course-paper.yaml \
+  --input-docx ../path/to/report-body.docx \
+  --output-docx ../output/report-with-cover.docx \
+  --preview-png ../output/cover-preview.png
+```
+
+Useful options:
+
+```bash
+--font-path /usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc
+--font-index 2
+--field-offset-y -12
+```
+
+`NotoSansCJK-Regular.ttc` is a font collection. For Simplified Chinese, use face index `2` (`Noto Sans CJK SC`); the default index `0` is usually the Japanese face.
+
 ## Inline Fields
 
 You can skip YAML and pass fields directly:
@@ -151,9 +177,11 @@ cufe-report-cover-skill/
     │   └── lab_report_cover_page1.pdf
     └── scripts/
         ├── generate_cover.py
-        └── merge_cover.py
+        ├── merge_cover.py
+        ├── prepend_docx_cover.py
+        └── render_cover_png.py
 ```
 
 ## Important Rule For Agents
 
-Do not edit the original cover templates through DOCX, Word, WPS, Google Docs, or office conversion workflows. Generate a fresh one-page cover PDF with this skill, then replace or prepend it at the PDF level.
+Do not edit the original cover templates through DOCX, Word, WPS, Google Docs, or office conversion workflows. Generate a fresh one-page cover PDF/PNG with this skill, then replace or prepend it at the PDF level, or insert the rendered PNG as a full-page DOCX cover.
