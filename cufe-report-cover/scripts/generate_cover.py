@@ -12,19 +12,59 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 VENDOR = ROOT / "vendor"
-if VENDOR.exists():
-    sys.path.insert(0, str(VENDOR))
 
-try:
-    from reportlab.lib.pagesizes import A4
-    from reportlab.pdfbase import pdfmetrics
-    from reportlab.pdfbase.cidfonts import UnicodeCIDFont
-    from reportlab.pdfbase.ttfonts import TTFont
-    from reportlab.pdfgen import canvas
-except ImportError as exc:
-    raise SystemExit(
-        "Missing dependency: reportlab. Install with `python3 -m pip install reportlab`."
-    ) from exc
+
+def enable_vendor_if_compatible(allow_binary_mismatch: bool = False) -> bool:
+    if os.environ.get("CUFE_COVER_NO_VENDOR"):
+        return False
+    if not VENDOR.exists() or str(VENDOR) in sys.path:
+        return VENDOR.exists()
+    if not allow_binary_mismatch and not os.environ.get("CUFE_COVER_FORCE_VENDOR"):
+        cache_tag = sys.implementation.cache_tag
+        binary_modules = list(VENDOR.rglob("*.so")) + list(VENDOR.rglob("*.pyd"))
+        incompatible = [
+            path.name
+            for path in binary_modules
+            if "cpython-" in path.name and cache_tag not in path.name
+        ]
+        if incompatible:
+            return False
+    sys.path.insert(0, str(VENDOR))
+    return True
+
+
+def dependency_error(package: str, exc: BaseException) -> SystemExit:
+    return SystemExit(
+        f"Missing dependency: {package}. Install with `python3 -m pip install -r requirements.txt`, "
+        f"use a matching Python for cufe-report-cover/vendor, or set CUFE_COVER_NO_VENDOR=1 "
+        f"to ignore vendored packages. Current Python ABI is {sys.implementation.cache_tag}. "
+        f"Original error: {exc}"
+    )
+
+
+def import_reportlab():
+    try:
+        from reportlab.lib.pagesizes import A4
+        from reportlab.pdfbase import pdfmetrics
+        from reportlab.pdfbase.cidfonts import UnicodeCIDFont
+        from reportlab.pdfbase.ttfonts import TTFont
+        from reportlab.pdfgen import canvas
+        return A4, pdfmetrics, UnicodeCIDFont, TTFont, canvas
+    except Exception as first_exc:
+        if enable_vendor_if_compatible(allow_binary_mismatch=True):
+            try:
+                from reportlab.lib.pagesizes import A4
+                from reportlab.pdfbase import pdfmetrics
+                from reportlab.pdfbase.cidfonts import UnicodeCIDFont
+                from reportlab.pdfbase.ttfonts import TTFont
+                from reportlab.pdfgen import canvas
+                return A4, pdfmetrics, UnicodeCIDFont, TTFont, canvas
+            except Exception as vendor_exc:
+                raise dependency_error("reportlab", vendor_exc) from vendor_exc
+        raise dependency_error("reportlab", first_exc) from first_exc
+
+
+A4, pdfmetrics, UnicodeCIDFont, TTFont, canvas = import_reportlab()
 
 ASSETS = ROOT / "assets"
 COURSE_COVER_PAGE1 = ASSETS / "course_paper_cover_page1.pdf"
@@ -57,10 +97,13 @@ def load_data(path: str | None, field_overrides: list[str]) -> dict[str, str]:
             try:
                 import yaml
             except ImportError as exc:
-                raise SystemExit(
-                    "YAML input requires PyYAML. Install with `python3 -m pip install pyyaml`, "
-                    "or use a .json data file."
-                ) from exc
+                if enable_vendor_if_compatible():
+                    try:
+                        import yaml
+                    except Exception as vendor_exc:
+                        raise dependency_error("pyyaml", vendor_exc) from vendor_exc
+                else:
+                    raise dependency_error("pyyaml", exc) from exc
             loaded = yaml.safe_load(text)
             raw = loaded or {}
 
@@ -119,10 +162,14 @@ def draw_centered_text(
 def merge_overlay(base_pdf: Path, overlay_pdf_bytes: bytes, output: Path) -> None:
     try:
         from pypdf import PdfReader, PdfWriter
-    except ImportError as exc:
-        raise SystemExit(
-            "Template overlay requires pypdf. Install with `python3 -m pip install pypdf`."
-        ) from exc
+    except Exception as exc:
+        if enable_vendor_if_compatible():
+            try:
+                from pypdf import PdfReader, PdfWriter
+            except Exception as vendor_exc:
+                raise dependency_error("pypdf", vendor_exc) from vendor_exc
+        else:
+            raise dependency_error("pypdf", exc) from exc
 
     base_reader = PdfReader(str(base_pdf))
     overlay_reader = PdfReader(BytesIO(overlay_pdf_bytes))
